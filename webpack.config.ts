@@ -1,14 +1,19 @@
 import path from 'path';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
-import webpack from 'webpack';
+import webpack, { Configuration as WebpackConfiguration } from 'webpack';
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
 
+interface Configuration extends WebpackConfiguration {
+  devServer?: WebpackDevServerConfiguration;
+}
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-const config: webpack.Configuration = {
+const config: Configuration = {
   name: 'sleact',
   mode: isDevelopment ? 'development' : 'production',
-  devtool: isDevelopment ? 'hidden-source-map' : 'inline-source-map',
+  devtool: !isDevelopment ? 'hidden-source-map' : 'inline-source-map',
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {
@@ -23,6 +28,7 @@ const config: webpack.Configuration = {
   entry: {
     app: './client',
   },
+  target: ['web', 'es5'],
   module: {
     rules: [
       {
@@ -33,7 +39,7 @@ const config: webpack.Configuration = {
             [
               '@babel/preset-env',
               {
-                targets: { browsers: ['last 2 chrome versions'] },
+                targets: { browsers: ['IE 10'] },
                 debug: isDevelopment,
               },
             ],
@@ -42,11 +48,13 @@ const config: webpack.Configuration = {
           ],
           env: {
             development: {
-              plugins: [require.resolve('react-refresh/babel')],
+              plugins: [['@emotion/babel-plugin', { sourceMap: true }], require.resolve('react-refresh/babel')],
+            },
+            production: {
+              plugins: ['@emotion/babel-plugin'],
             },
           },
         },
-        exclude: path.join(__dirname, 'node_modules'),
       },
       {
         test: /\.css?$/,
@@ -72,14 +80,30 @@ const config: webpack.Configuration = {
     historyApiFallback: true,
     port: 3090,
     publicPath: '/dist/',
+    proxy: {
+      '/api/': {
+        target: 'http://localhost:3095',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
 };
 
 if (isDevelopment && config.plugins) {
   config.plugins.push(new webpack.HotModuleReplacementPlugin());
-  config.plugins.push(new ReactRefreshWebpackPlugin());
+  config.plugins.push(
+    new ReactRefreshWebpackPlugin({
+      overlay: {
+        //useURLPolyfill: true,
+      },
+    }),
+  );
+  config.plugins.push(new BundleAnalyzerPlugin({ analyzerMode: 'server', openAnalyzer: false }));
 }
 if (!isDevelopment && config.plugins) {
+  config.plugins.push(new webpack.LoaderOptionsPlugin({ minimize: true }));
+  config.plugins.push(new BundleAnalyzerPlugin({ analyzerMode: 'static' }));
 }
 
 export default config;
