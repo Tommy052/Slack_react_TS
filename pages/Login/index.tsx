@@ -1,13 +1,14 @@
 import useInput from '@hooks/useInput';
 import { Button, Error, Form, Header, Input, Label, LinkContainer } from '@pages/Singup/styles';
-// import fetcher from '@utils/fetcher';
+import fetcher from '@utils/fetcher';
 import axios from 'axios';
 import React, { useCallback, useState } from 'react';
-import { Redirect } from 'react-router-dom';
-// import useSWR from 'swr';
+import { Redirect, Link } from 'react-router-dom';
+import useSWR from 'swr';
 
 const LogIn = () => {
-  // const { data: userData, error, revalidate } = useSWR('/api/users', fetcher);
+  const { data, error, revalidate } = useSWR('/api/users', fetcher,
+  );
   const [logInError, setLogInError] = useState(false);
   const [email, onChangeEmail] = useInput('');
   const [password, onChangePassword] = useInput('');
@@ -17,14 +18,14 @@ const LogIn = () => {
       setLogInError(false);
       axios
         .post(
-          'http://localhost:3095/api/users/login',
+          '/api/users/login',
           { email, password },
           {
             withCredentials: true,
           },
         )
         .then(() => {
-          // revalidate();
+          revalidate();
         })
         .catch((error) => {
           setLogInError(error.response?.data?.statusCode === 401);
@@ -33,6 +34,12 @@ const LogIn = () => {
     [email, password],
   );
 
+  if (data === undefined) {
+    <div>로딩중....</div>
+  }
+  if (data) {
+    return <Redirect to="/workspace/channel" />
+  }
   // console.log(error, userData);
   // if (!error && userData) {
   //   console.log('로그인됨', userData);
@@ -60,7 +67,7 @@ const LogIn = () => {
       </Form>
       <LinkContainer>
         아직 회원이 아니신가요?&nbsp;
-        <a href="/signup">회원가입 하러가기</a>
+        <Link to="/signup">회원가입 하러가기</Link>
       </LinkContainer>
     </div>
   );
